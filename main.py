@@ -93,30 +93,22 @@ def assign_coupon_multiple(token, coupon_id, member_ids, allow_duplicates=None):
 
 def assign_coupon_batch(token, coupon_id, member_ids, quantity=1, allow_duplicates=False, progress_callback=None):
     """Assign coupons in batches with progress tracking"""
-    total_assignments = len(member_ids) * quantity
-    completed_assignments = 0
-    results = []
-    
     # Choose the appropriate endpoint based on requirements
     assign_function = assign_coupon_multiple if allow_duplicates else assign_coupon_single
     
     try:
-        for i in range(quantity):
-            if progress_callback:
-                progress_callback(f"Processing batch {i+1} of {quantity}...")
-            
-            result = assign_function(token, coupon_id, member_ids, allow_duplicates)
-            results.append(result)
-            completed_assignments += len(member_ids)
-            
-            if progress_callback:
-                progress_percentage = (completed_assignments / total_assignments) * 100
-                progress_callback(f"Progress: {completed_assignments}/{total_assignments} ({progress_percentage:.1f}%)")
+        if progress_callback:
+            progress_callback("Processing coupon assignments...")
+        
+        result = assign_function(token, coupon_id, member_ids, allow_duplicates)
+        
+        if progress_callback:
+            progress_callback(f"Progress: {len(member_ids)}/{len(member_ids)} (100.0%)")
     
     except Exception as e:
         raise ValueError(f"Batch assignment failed: {e}")
     
-    return results
+    return [result]
 
 # --- GUI App ---
 class CouponAssignerApp(ctk.CTk):
@@ -183,13 +175,6 @@ class CouponAssignerApp(ctk.CTk):
         self.member_ids_entry = ctk.CTkTextbox(assignment_frame, height=100, width=500)
         self.member_ids_entry.pack(pady=(0, 10))
 
-        # Quantity input
-        quantity_label = ctk.CTkLabel(assignment_frame, text="Quantity per member:", font=("Arial", 12))
-        quantity_label.pack(pady=(5, 2))
-        self.quantity_entry = ctk.CTkEntry(assignment_frame, placeholder_text="1", width=100, height=35)
-        self.quantity_entry.pack(pady=(0, 10))
-        self.quantity_entry.insert(0, "1")
-
         # Options
         options_frame = ctk.CTkFrame(assignment_frame, fg_color="transparent")
         options_frame.pack(pady=10, fill="x")
@@ -224,7 +209,7 @@ class CouponAssignerApp(ctk.CTk):
             height=40,
             font=("Arial", 12, "bold")
         )
-        self.assign_button.pack(side="left", padx=(0, 10))
+        self.assign_button.pack(side="left", padx=(0, 5))
 
         self.clear_button = ctk.CTkButton(
             button_frame, 
@@ -235,7 +220,10 @@ class CouponAssignerApp(ctk.CTk):
             fg_color="#666666",
             hover_color="#555555"
         )
-        self.clear_button.pack(side="left")
+        self.clear_button.pack(side="left", padx=(5, 0))
+        
+        # Center the button frame
+        button_frame.pack_configure(anchor="center")
 
         # Progress bar
         self.progress_bar = ctk.CTkProgressBar(assignment_frame, width=500)
@@ -267,8 +255,6 @@ class CouponAssignerApp(ctk.CTk):
         """Clear all input fields"""
         self.member_ids_entry.delete("1.0", "end")
         self.coupon_id_entry.delete(0, "end")
-        self.quantity_entry.delete(0, "end")
-        self.quantity_entry.insert(0, "1")
         self.progress_bar.set(0)
         self.log("🗑️ Fields cleared")
 
@@ -288,7 +274,7 @@ class CouponAssignerApp(ctk.CTk):
         password = self.password_entry.get().strip()
         coupon_id = self.coupon_id_entry.get().strip()
         member_ids_text = self.member_ids_entry.get("1.0", "end").strip()
-        quantity = self.quantity_entry.get().strip()
+        quantity = "1"  # Fixed quantity of 1
 
         if not username or not password:
             raise ValueError("Username and password are required")
@@ -298,9 +284,6 @@ class CouponAssignerApp(ctk.CTk):
         
         if not member_ids_text:
             raise ValueError("At least one member ID is required")
-        
-        if not quantity or not quantity.isdigit() or int(quantity) < 1:
-            raise ValueError("Quantity must be a positive integer")
 
         # Parse member IDs
         member_ids = []
@@ -357,7 +340,6 @@ class CouponAssignerApp(ctk.CTk):
             
             # Assign coupons
             self.log(f"🎫 Assigning coupon {inputs['coupon_id']} to {len(inputs['member_ids'])} members...")
-            self.log(f"📊 Quantity per member: {inputs['quantity']}")
             self.log(f"🔄 Allow duplicates: {'Yes' if inputs['allow_duplicates'] else 'No'}")
             
             results = assign_coupon_batch(
@@ -372,7 +354,7 @@ class CouponAssignerApp(ctk.CTk):
             # Success
             self.progress_bar.set(1.0)
             self.log("🎉 Coupon assignment completed successfully!")
-            self.log(f"📈 Total assignments processed: {len(inputs['member_ids']) * inputs['quantity']}")
+            self.log(f"📈 Total assignments processed: {len(inputs['member_ids'])}")
             
             # Log detailed results
             for i, result in enumerate(results):

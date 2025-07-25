@@ -1,6 +1,8 @@
 # RedCat Coupon Assigner
 
-A simple desktop application for assigning coupons to members through the RedCat API.
+**A desktop GUI application for bulk coupon assignment through the RedCat API.**
+
+Efficiently assign coupons to multiple members at once with progress tracking and duplicate support.
 
 ## Quick Start
 
